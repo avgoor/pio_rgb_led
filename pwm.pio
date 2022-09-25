@@ -1,0 +1,42 @@
+; 32-bit FIFO decodes as [7:B][7:G][7:R][11:PADDING]
+; 7-bit color range [0-127], 11-bit PADDING range [0-381]
+; PADDING = 381 - R - G - B, so if all colors are lit up then PADDING=0
+.program pwmrgb
+    pull noblock
+    mov x, osr
+    out y, 7        ; Take 7 MSB to Y
+    ;set pins, 0
+    jmp !y red
+    set pindirs, 1
+red:
+    jmp y-- red
+    out y, 7        ; Take 7 MSB to Y
+    jmp !y green
+    set pindirs, 2
+green:
+    jmp y-- green
+    out y, 7        ; Take 7 MSB to Y
+    jmp !y blue
+    set pindirs, 4
+blue:
+    jmp y-- blue
+    ;set pins, 0
+    set pindirs, 0
+    out y, 11       ; Take 11 MSB to Y
+leftover:
+    jmp y-- leftover
+
+% c-sdk {
+static inline void pwm_program_init(PIO pio, uint sm, uint offset, uint pin) {
+   pio_gpio_init(pio, pin);
+   pio_gpio_init(pio, pin+1);
+   pio_gpio_init(pio, pin+2);
+//   pio_sm_set_set_pins(pio, sm, pin, 3);
+   pio_sm_config c = pwmrgb_program_get_default_config(offset);
+   sm_config_set_clkdiv(&c, 1);
+   sm_config_set_set_pins(&c, pin, 3);
+   sm_config_set_out_shift(&c, false, false, 0);
+   pio_sm_init(pio, sm, offset, &c);
+   pio_sm_set_enabled(pio, sm, true);
+}
+%}
