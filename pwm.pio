@@ -21,7 +21,7 @@ green:
 blue:
     jmp y-- blue
     ;set pins, 0
-    set pindirs, 0
+    set pindirs, 0x0
     out y, 11       ; Take 11 MSB to Y
 leftover:
     jmp y-- leftover

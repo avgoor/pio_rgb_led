@@ -34,12 +34,12 @@ struct _led_brightness {
     {126, 0, 0},
     {0, 126, 0},
     {0, 0, 126},
-    {126, 0, 126},
-    {126, 126, 126},
-    {0, 126, 126},
-    {126, 126, 0},
+    {1, 0, 1},
     {0, 0, 0},
-    {5,5,5}
+    {1, 5, 5},
+    {0, 0, 0},
+    {1, 1, 1},
+    {0,0,0}
 };
 
 static volatile int position = 0;
@@ -58,15 +58,16 @@ void gpio_callback(uint gpio, uint32_t events) {
 }
 
 void draw_next_led(){
-    pio_sm_set_enabled(pio, sm, false);
+    //pio_sm_set_enabled(pio, sm, false);
 
     //gpio_set_dir_all_bits(0);
-    gpio_set_function(leds[position].red, GPIO_FUNC_SIO);
-    gpio_set_function(leds[position].green, GPIO_FUNC_SIO);
-    gpio_set_function(leds[position].blue, GPIO_FUNC_SIO);
-    gpio_set_function(leds[position].cmn, GPIO_FUNC_SIO);
-    gpio_set_dir(leds[position].cmn, false);
-    gpio_put(leds[position].cmn, false);
+    // gpio_set_function(leds[position].red, GPIO_FUNC_SIO);
+    // gpio_set_function(leds[position].green, GPIO_FUNC_SIO);
+    // gpio_set_function(leds[position].blue, GPIO_FUNC_SIO);
+    // gpio_set_function(leds[position].cmn, GPIO_FUNC_SIO);
+    //gpio_set_dir(leds[position].cmn, false);
+    gpio_set_dir_in_masked(0xFF80);
+    gpio_clr_mask(0xFF80);
 
 
     if (++position == LEDS_COUNT)
@@ -79,7 +80,7 @@ void draw_next_led(){
     gpio_set_dir(leds[position].cmn, true);
     gpio_put(leds[position].cmn, true);
 
-    pio_sm_set_enabled(pio, sm, true);
+    //pio_sm_set_enabled(pio, sm, true);
     pio_sm_set_set_pins(pio, sm, leds[position].red, 3);
 
     pio_pwm_set_levels(pio, sm, leds_brightness[position].red,
@@ -129,7 +130,7 @@ int main(){
     pio_pwm_set_levels(pio, sm, 0, 0, 0);
     
     struct repeating_timer timer;
-    add_repeating_timer_us(100, refresh_callback, NULL, &timer);
+    add_repeating_timer_us(-200, refresh_callback, NULL, &timer);
 
     while (true) {
         sleep_ms(50);
