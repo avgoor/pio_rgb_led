@@ -35,11 +35,11 @@ struct _led_brightness {
     {0, 126, 0},
     {0, 0, 126},
     {1, 0, 1},
+    {126, 126, 126},
     {0, 0, 0},
-    {1, 5, 5},
-    {0, 0, 0},
-    {1, 1, 1},
-    {0,0,0}
+    {126, 0, 0},
+    {0, 126, 0},
+    {0, 0 ,126}
 };
 
 static volatile int position = 0;
@@ -49,6 +49,7 @@ static int sm = 0;
 
 void pio_pwm_set_levels(PIO pio, uint sm, uint32_t red, uint32_t green, uint32_t blue) {
     uint32_t levels = (period - (red + green + blue)) | (red << 25) | (green << 18) | (blue << 11);
+    //uint32_t levels = (0) | (red << 25) | (green << 18) | (blue << 11);
     pio_sm_put_blocking(pio, sm, levels);
 }
 
@@ -61,11 +62,11 @@ void draw_next_led(){
     //pio_sm_set_enabled(pio, sm, false);
 
     //gpio_set_dir_all_bits(0);
-    // gpio_set_function(leds[position].red, GPIO_FUNC_SIO);
-    // gpio_set_function(leds[position].green, GPIO_FUNC_SIO);
-    // gpio_set_function(leds[position].blue, GPIO_FUNC_SIO);
-    // gpio_set_function(leds[position].cmn, GPIO_FUNC_SIO);
-    //gpio_set_dir(leds[position].cmn, false);
+    gpio_set_function(leds[position].red, GPIO_FUNC_SIO);
+    gpio_set_function(leds[position].green, GPIO_FUNC_SIO);
+    gpio_set_function(leds[position].blue, GPIO_FUNC_SIO);
+    gpio_set_function(leds[position].cmn, GPIO_FUNC_SIO);
+    gpio_set_dir(leds[position].cmn, false);
     gpio_set_dir_in_masked(0xFF80);
     gpio_clr_mask(0xFF80);
 
@@ -80,7 +81,7 @@ void draw_next_led(){
     gpio_set_dir(leds[position].cmn, true);
     gpio_put(leds[position].cmn, true);
 
-    //pio_sm_set_enabled(pio, sm, true);
+    // pio_sm_set_enabled(pio, sm, true);
     pio_sm_set_set_pins(pio, sm, leds[position].red, 3);
 
     pio_pwm_set_levels(pio, sm, leds_brightness[position].red,
@@ -130,26 +131,23 @@ int main(){
     pio_pwm_set_levels(pio, sm, 0, 0, 0);
     
     struct repeating_timer timer;
-    add_repeating_timer_us(-200, refresh_callback, NULL, &timer);
-
+    add_repeating_timer_us(-2000, refresh_callback, NULL, &timer);
+    uint8_t c = 0;
     while (true) {
-        sleep_ms(50);
-        // r_level = (r_level + 1) % 127;
-        // g_level = (g_level + 1) % 127;
-        // b_level = (b_level + 1) % 127;
-        // leds_brightness[0].red = r_level;
-        // leds_brightness[0].green = 0;
-        // leds_brightness[0].blue = 0;
-        // leds_brightness[1].green = g_level;
-        // leds_brightness[2].blue = b_level;
-        // leds_brightness[3].red = r_level;
-        // leds_brightness[4].green = g_level;
-        // leds_brightness[5].blue = b_level;
-        // leds_brightness[6].red = r_level;
-        // leds_brightness[7].green = g_level;
-        // leds_brightness[8].blue = b_level;
+        // leds_brightness[c].red = 0;
+        // leds_brightness[c].blue = 0;
+        // leds_brightness[c].green = 0;        
+        // if (++c == LEDS_COUNT)
+        //     c = 0;
+        // r_level = (r_level + 1) % 126;
+        // g_level = (g_level + 5) % 126;
+        // b_level = (b_level + 3) % 126;
+        // leds_brightness[c].red = r_level;
+        // leds_brightness[c].blue = b_level;
+        // leds_brightness[c].green = g_level;
         gpio_put(PICO_DEFAULT_LED_PIN, state);
         state = !state;
+        sleep_ms(100);
     }
 	
 }

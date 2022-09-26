@@ -5,7 +5,6 @@
     pull noblock
     mov x, osr
     out y, 7        ; Take 7 MSB to Y
-    ;set pins, 0
     jmp !y red
     set pindirs, 1
 red:
@@ -20,8 +19,7 @@ green:
     set pindirs, 4
 blue:
     jmp y-- blue
-    ;set pins, 0
-    set pindirs, 0x0
+    set pindirs, 0
     out y, 11       ; Take 11 MSB to Y
 leftover:
     jmp y-- leftover
