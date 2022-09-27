@@ -1,11 +1,12 @@
 #include "stdio.h"
+#include "stdlib.h"
 
 #include "pico/stdlib.h"
 #include "pico/bootrom.h"
 #include "hardware/pwm.h"
 #include "pwm.pio.h"
 
-const uint16_t period = 381u;
+const uint16_t period = 96u;
 
 #define LEDS_COUNT  9
 
@@ -31,15 +32,15 @@ struct _led_brightness {
     uint8_t green;
     uint8_t blue;
 } leds_brightness[LEDS_COUNT] = {
-    {126, 0, 0},
-    {0, 126, 0},
-    {0, 0, 126},
+    {31, 0, 0},
+    {0, 31, 0},
+    {0, 0, 31},
     {1, 0, 1},
-    {126, 126, 126},
+    {31, 31, 31},
     {0, 0, 0},
-    {126, 0, 0},
-    {0, 126, 0},
-    {0, 0 ,126}
+    {24, 0, 0},
+    {2, 2, 2},
+    {0, 0 , 12}
 };
 
 static volatile int position = 0;
@@ -47,9 +48,8 @@ static PIO pio = pio0;
 static int sm = 0;
 
 
-void pio_pwm_set_levels(PIO pio, uint sm, uint32_t red, uint32_t green, uint32_t blue) {
-    uint32_t levels = (period - (red + green + blue)) | (red << 25) | (green << 18) | (blue << 11);
-    //uint32_t levels = (0) | (red << 25) | (green << 18) | (blue << 11);
+void pio_pwm_set_levels(PIO pio, uint sm, uint32_t cmn, uint32_t red, uint32_t green, uint32_t blue) {
+    uint32_t levels = ((cmn - 10) & 0x1F) | (((cmn - 10) & 0x1F) << 5) | (red << 10) | (green << 15) | (blue << 20) | ((period - (red + green + blue)) << 25);
     pio_sm_put_blocking(pio, sm, levels);
 }
 
@@ -59,34 +59,18 @@ void gpio_callback(uint gpio, uint32_t events) {
 }
 
 void draw_next_led(){
-    //pio_sm_set_enabled(pio, sm, false);
-
-    //gpio_set_dir_all_bits(0);
-    gpio_set_function(leds[position].red, GPIO_FUNC_SIO);
-    gpio_set_function(leds[position].green, GPIO_FUNC_SIO);
-    gpio_set_function(leds[position].blue, GPIO_FUNC_SIO);
-    gpio_set_function(leds[position].cmn, GPIO_FUNC_SIO);
-    gpio_set_dir(leds[position].cmn, false);
-    gpio_set_dir_in_masked(0xFF80);
-    gpio_clr_mask(0xFF80);
-
-
+    
     if (++position == LEDS_COUNT)
         position = 0;
     
-    gpio_set_function(leds[position].red, GPIO_FUNC_PIO0);
-    gpio_set_function(leds[position].green, GPIO_FUNC_PIO0);
-    gpio_set_function(leds[position].blue, GPIO_FUNC_PIO0);
-    gpio_set_function(leds[position].cmn, GPIO_FUNC_SIO);
-    gpio_set_dir(leds[position].cmn, true);
-    gpio_put(leds[position].cmn, true);
-
-    // pio_sm_set_enabled(pio, sm, true);
+    pio_sm_set_enabled(pio, sm, false);
     pio_sm_set_set_pins(pio, sm, leds[position].red, 3);
-
-    pio_pwm_set_levels(pio, sm, leds_brightness[position].red,
+    pio_sm_put_blocking(pio, sm, (1 << (leds[position].cmn)));
+    pio_sm_exec(pio, sm, pio_encode_pull(false, false));
+    pio_sm_exec(pio, sm, pio_encode_out(pio_isr, 32));
+    pio_pwm_set_levels(pio, sm, leds[position].cmn, leds_brightness[position].red,
         leds_brightness[position].green, leds_brightness[position].blue);
-
+    pio_sm_set_enabled(pio, sm, true);
 };
 
 bool refresh_callback(struct repeating_timer *t) {
@@ -97,54 +81,59 @@ bool refresh_callback(struct repeating_timer *t) {
 int main(){
     stdio_init_all();
 
-
     gpio_set_pulls(0, true, false);
     gpio_set_irq_enabled_with_callback(0, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL,
         true, &gpio_callback);
 
-
-
-    uint8_t r_level = 0;
-    uint8_t g_level = 0;
-    uint8_t b_level = 0;
     uint offset = pio_add_program(pio, &pwmrgb_program);
-    //printf("Loaded program at %d\n", offset);
-    gpio_init_mask(0xFFFFFF);
-    gpio_set_dir_all_bits(0);
 
-    gpio_set_pulls(15, false, false);
-    gpio_set_pulls(14, false, false);
-    gpio_set_pulls(13, false, false);
-    gpio_set_pulls(12, false, false);
-    gpio_set_pulls(11, false, false);
-    gpio_set_pulls(10, false, false);
-    gpio_set_pulls(9, false, false);
-    gpio_set_pulls(8, false, false);
-    gpio_set_pulls(7, false, false);
-    
+    pwm_program_init(pio, sm, offset);
+    for (uint8_t c = 0; c < LEDS_COUNT; c++){
+        gpio_set_pulls(leds[c].cmn, false, false);
+        gpio_set_function(leds[c].cmn, GPIO_FUNC_PIO0);
+    };
+    pio_sm_set_out_pins(pio, sm, 0, 32);
+
+
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, true);
     
     bool state = true;
 
-    pwm_program_init(pio, sm, offset, 13);
-    pio_pwm_set_levels(pio, sm, 0, 0, 0);
     
     struct repeating_timer timer;
     add_repeating_timer_us(-2000, refresh_callback, NULL, &timer);
     uint8_t c = 0;
     while (true) {
-        // leds_brightness[c].red = 0;
-        // leds_brightness[c].blue = 0;
-        // leds_brightness[c].green = 0;        
-        // if (++c == LEDS_COUNT)
-        //     c = 0;
-        // r_level = (r_level + 1) % 126;
-        // g_level = (g_level + 5) % 126;
-        // b_level = (b_level + 3) % 126;
-        // leds_brightness[c].red = r_level;
-        // leds_brightness[c].blue = b_level;
-        // leds_brightness[c].green = g_level;
+        leds_brightness[c].red = 0;
+        leds_brightness[c].blue = 0;
+        leds_brightness[c].green = 0;        
+        if (++c == LEDS_COUNT)
+            c = 0;
+        for (uint8_t i = 0; i < 31; i++){
+            leds_brightness[c].red = ++leds_brightness[c].red;
+            sleep_ms(10);
+        };
+        for (uint8_t i = 0; i < 31; i++){
+            leds_brightness[c].red = --leds_brightness[c].red;
+            sleep_ms(10);
+        };
+        for (uint8_t i = 0; i < 31; i++){
+            leds_brightness[c].green = ++leds_brightness[c].green;
+            sleep_ms(10);
+        };
+        for (uint8_t i = 0; i < 31; i++){
+            leds_brightness[c].green = --leds_brightness[c].green;
+            sleep_ms(10);
+        };
+        for (uint8_t i = 0; i < 31; i++){
+            leds_brightness[c].blue = ++leds_brightness[c].blue;
+            sleep_ms(10);
+        };
+        for (uint8_t i = 0; i < 31; i++){
+            leds_brightness[c].blue = --leds_brightness[c].blue;
+            sleep_ms(10);
+        };
         gpio_put(PICO_DEFAULT_LED_PIN, state);
         state = !state;
         sleep_ms(100);
