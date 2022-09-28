@@ -6,7 +6,7 @@
 #include "hardware/pwm.h"
 #include "pwm.pio.h"
 
-const uint16_t period = 96u;
+const uint16_t period = 31u;
 
 #define LEDS_COUNT  9
 
@@ -48,15 +48,15 @@ static PIO pio = pio0;
 static int sm = 0;
 
 
-void pio_pwm_set_levels(PIO pio, uint sm, uint32_t cmn, uint32_t red, uint32_t green, uint32_t blue) {
-    uint32_t levels = ((cmn - 10) & 0x1F) | (((cmn - 10) & 0x1F) << 5) | (red << 10) | (green << 15) | (blue << 20) | ((period - (red + green + blue)) << 25);
+static inline void pio_pwm_set_levels(PIO pio, uint sm, uint32_t cmn, uint32_t red, uint32_t green, uint32_t blue) {
+    uint32_t levels = ((cmn - 10) & 0x1F) | (((cmn - 10) & 0x1F) << 5) | (red << 10) | (green << 15) | (blue << 20) | ((period - MAX(red , MAX(green, blue))) << 25);
     pio_sm_put_blocking(pio, sm, levels);
-}
+};
 
 void gpio_callback(uint gpio, uint32_t events) {
     printf("Button pushed, reboot to bootloader.\n");
     reset_usb_boot(0, 0);
-}
+};
 
 void draw_next_led(){
     

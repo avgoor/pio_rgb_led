@@ -21,9 +21,8 @@ green:
     set pindirs, 4
 blue:
     jmp y-- blue
+    set pindirs, 0
     out y, 7
-    mov osr, isr
-    out pindirs, 32
 leftover:
     jmp y-- leftover
 
