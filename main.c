@@ -32,15 +32,15 @@ struct _led_brightness {
     uint8_t green;
     uint8_t blue;
 } leds_brightness[LEDS_COUNT] = {
-    {31, 0, 0},
-    {0, 31, 0},
-    {0, 0, 31},
-    {1, 0, 1},
-    {31, 31, 31},
     {0, 0, 0},
-    {24, 0, 0},
-    {2, 2, 2},
-    {0, 0 , 12}
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0},
+    {31, 31, 31},
+    {31, 31, 31},
+    {31, 31, 31},
+    {31, 31, 31}
 };
 
 static volatile int position = 0;
@@ -102,7 +102,7 @@ int main(){
 
     
     struct repeating_timer timer;
-    add_repeating_timer_us(-2000, refresh_callback, NULL, &timer);
+    add_repeating_timer_us(-1000, refresh_callback, NULL, &timer);
     uint8_t c = 0;
     while (true) {
         leds_brightness[c].red = 0;
@@ -110,33 +110,33 @@ int main(){
         leds_brightness[c].green = 0;        
         if (++c == LEDS_COUNT)
             c = 0;
-        for (uint8_t i = 0; i < 31; i++){
+        for (uint8_t i = 0; i < 31; ++i){
             leds_brightness[c].red = ++leds_brightness[c].red;
-            sleep_ms(10);
+            sleep_ms(5);
         };
-        for (uint8_t i = 0; i < 31; i++){
+        for (uint8_t i = 0; i < 31; ++i){
             leds_brightness[c].red = --leds_brightness[c].red;
             sleep_ms(10);
         };
-        for (uint8_t i = 0; i < 31; i++){
+        for (uint8_t i = 0; i < 31; ++i){
             leds_brightness[c].green = ++leds_brightness[c].green;
-            sleep_ms(10);
+            sleep_ms(5);
         };
-        for (uint8_t i = 0; i < 31; i++){
+        for (uint8_t i = 0; i < 31; ++i){
             leds_brightness[c].green = --leds_brightness[c].green;
-            sleep_ms(10);
+            sleep_ms(15);
         };
-        for (uint8_t i = 0; i < 31; i++){
+        for (uint8_t i = 0; i < 31; ++i){
             leds_brightness[c].blue = ++leds_brightness[c].blue;
-            sleep_ms(10);
+            sleep_ms(5);
         };
-        for (uint8_t i = 0; i < 31; i++){
+        for (uint8_t i = 0; i < 31; ++i){
             leds_brightness[c].blue = --leds_brightness[c].blue;
             sleep_ms(10);
         };
         gpio_put(PICO_DEFAULT_LED_PIN, state);
         state = !state;
-        sleep_ms(100);
+        //sleep_ms(100);
     }
 	
 }

@@ -1,3 +1,6 @@
+; current data structure:
+; TX FIFO - [10b Garbage][5b Red][5b Green][5b Blue][7b Leftover]
+; ISR (via manual push) - [32b Common Pin Mask]
 .program pwmrgb
     mov osr, isr
     out pindirs, 32
